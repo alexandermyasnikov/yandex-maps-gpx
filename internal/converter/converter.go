@@ -481,13 +481,15 @@ func parseHtmlBookmark(htmlBookmark []byte) (*Bookmark, error) {
 		return true
 	})
 
+	_, color, _ := strings.Cut(cfg.Get("icon").String(), ":")
+
 	bookmark := Bookmark{
 		Revision:    cfg.Get("revision").Int(),
 		PublicId:    cfg.Get("publicId").String(),
 		Title:       cfg.Get("title").String(),
 		Description: cfg.Get("description").String(),
 		Author:      cfg.Get("author").String(),
-		Color:       strings.TrimPrefix(cfg.Get("icon").String(), "confectionary:"),
+		Color:       color,
 		Children:    children,
 	}
 
