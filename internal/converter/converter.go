@@ -23,6 +23,8 @@ import (
 
 const (
 	cacheFileName = "yandex-maps-gpx-cache.json"
+
+	pauseAfterRequest = 1 * time.Second
 )
 
 type (
@@ -215,6 +217,19 @@ func (c *Converter) convert(ctx context.Context) error {
 	}
 
 	for _, item := range bookmark.Children {
+		u, err := url.Parse(item.Uri)
+		if err != nil {
+			return err
+		}
+
+		switch u.Host {
+		case "org", "geo":
+		case "pin":
+			continue
+		default:
+			slog.Warn("unsupported host", "host", u.Host)
+		}
+
 		htmlMetadata, err := c.getHtmlGeocodeMetadata(ctx, item.Uri)
 		if err != nil {
 			return err
@@ -318,6 +333,8 @@ func (c *Converter) getHtmlGeocodeMetadata(ctx context.Context, uri string) ([]b
 		return nil, err
 	}
 
+	time.Sleep(pauseAfterRequest)
+
 	c.cache.Uri[uri] = CacheItem{
 		Updated: time.Now(),
 		Data:    body,
@@ -372,6 +389,18 @@ func (c *Converter) getHtmlGeocodeMetadataViaApi(ctx context.Context, uri string
 }
 
 func parseHtmlGeocodeMetadata(body []byte, bookmark BookmarkChildren) (BookmarkChildren, error) {
+	slog.Debug("parseHtmlGeocodeMetadata", "body", string(body))
+
+	if len(gjson.Get(string(body), "response.GeoObjectCollection.featureMember").Array()) == 0 {
+		slog.Warn("empty featureMember",
+			"title", bookmark.Title,
+			"uri", bookmark.Uri,
+			"body", string(body),
+		)
+
+		return bookmark, nil
+	}
+
 	obj := gjson.Get(string(body), "response.GeoObjectCollection.featureMember.0.GeoObject")
 
 	pos := obj.Get("Point.pos").String()
@@ -384,7 +413,7 @@ func parseHtmlGeocodeMetadata(body []byte, bookmark BookmarkChildren) (BookmarkC
 	bookmark.Text = obj.Get("metaDataProperty.GeocoderMetaData.text").String()
 
 	js, _ := json.MarshalIndent(json.RawMessage(obj.String()), "", "  ")
-	slog.Debug("parseHtmlGeocodeMetadata", "body", string(js))
+	slog.Debug("parseHtmlGeocodeMetadata", "obj", string(js))
 
 	return bookmark, nil
 }
