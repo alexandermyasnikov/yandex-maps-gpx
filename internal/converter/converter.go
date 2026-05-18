@@ -227,6 +227,15 @@ func (c *Converter) convert(ctx context.Context) error {
 		switch u.Host {
 		case "org", "geo":
 		case "pin":
+			if len(u.Query()["ll"]) == 0 {
+				slog.Warn("no ll param", "uri", item.Uri)
+				continue
+			}
+
+			_, _ = fmt.Sscanf(u.Query()["ll"][0], "%f,%f", &item.Lon, &item.Lat)
+
+			bookmark.Children[item.Id] = item
+
 			continue
 		default:
 			slog.Warn("unsupported host", "host", u.Host)
