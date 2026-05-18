@@ -25,6 +25,8 @@ const (
 	cacheFileName = "yandex-maps-gpx-cache.json"
 
 	pauseAfterRequest = 1 * time.Second
+
+	cacheExpiration = 7 * 24 * time.Hour
 )
 
 type (
@@ -256,7 +258,7 @@ func (c *Converter) convert(ctx context.Context) error {
 }
 
 func (c *Converter) getHtmlBookmark(ctx context.Context, publicId string) ([]byte, error) {
-	if item, ok := c.cache.Html[publicId]; ok {
+	if item, ok := c.cache.Html[publicId]; ok && time.Since(item.Updated) < cacheExpiration {
 		slog.Info("cache hit", "public_id", publicId)
 
 		return item.Data, nil
