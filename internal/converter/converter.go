@@ -26,7 +26,8 @@ const (
 
 	pauseAfterRequest = 1 * time.Second
 
-	cacheExpiration = 7 * 24 * time.Hour
+	cacheHtmlExpiration = 1 * 24 * time.Hour
+	cacheUriExpiration  = 7 * 24 * time.Hour
 )
 
 type (
@@ -267,7 +268,7 @@ func (c *Converter) convert(ctx context.Context) error {
 }
 
 func (c *Converter) getHtmlBookmark(ctx context.Context, publicId string) ([]byte, error) {
-	if item, ok := c.cache.Html[publicId]; ok && time.Since(item.Updated) < cacheExpiration {
+	if item, ok := c.cache.Html[publicId]; ok && time.Since(item.Updated) < cacheHtmlExpiration {
 		slog.Info("cache hit", "public_id", publicId)
 
 		return item.Data, nil
@@ -333,7 +334,7 @@ func (c *Converter) getHtmlBookmarkViaApi(ctx context.Context, publicId string) 
 //
 
 func (c *Converter) getHtmlGeocodeMetadata(ctx context.Context, uri string) ([]byte, error) {
-	if item, ok := c.cache.Uri[uri]; ok {
+	if item, ok := c.cache.Uri[uri]; ok && time.Since(item.Updated) < cacheUriExpiration {
 		slog.Info("cache hit", "uri", uri)
 
 		return item.Data, nil
